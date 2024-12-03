@@ -1,5 +1,6 @@
 import sys
 from typing import Union, Optional
+from decimal import Decimal, getcontext
 
 from PySide6.QtWidgets import QApplication, QMainWindow
 from PySide6.QtGui import QFontDatabase
@@ -18,6 +19,9 @@ class Calculator(QMainWindow):
         self.entry = self.ui.le_entry
         self.temp = self.ui.lbl_temp
         self.entry_max_len = self.entry.maxLength()
+
+        # Устанавливаем точность вычислений для Decimal
+        getcontext().prec = 28  # Устанавливаем нужную точность, можно настроить по необходимости
 
         QFontDatabase.addApplicationFont("ui/fonts/Rubik-Regular.ttf")
 
@@ -107,9 +111,10 @@ class Calculator(QMainWindow):
             self.temp.clear()
 
     @staticmethod
-    def remove_trailing_zeros(num: Union[float, int, str]) -> str:
-        n = str(float(num))
-        return n.replace('.0', '') if n.endswith('.0') else n
+    def remove_trailing_zeros(num: Union[Decimal, float, int, str]) -> str:
+        # Преобразуем в Decimal, чтобы управлять точностью
+        n = Decimal(str(num))  # Используем str для точного преобразования
+        return str(n).rstrip('0').rstrip('.') if '.' in str(n) else str(n)
 
     def add_temp(self) -> None:
         btn = self.sender()
@@ -119,14 +124,14 @@ class Calculator(QMainWindow):
             self.temp.setText(entry + f' {btn.text()} ')
             self.entry.setText('0')
 
-    def get_entry_num(self) -> Union[int, float]:
+    def get_entry_num(self) -> Union[Decimal, int]:
         entry = self.entry.text().strip('.')
-        return float(entry) if '.' in entry else int(entry)
+        return Decimal(entry) if '.' in entry else int(entry)
 
-    def get_temp_num(self) -> Union[int, float, None]:
+    def get_temp_num(self) -> Union[Decimal, int, None]:
         if self.temp.text():
             temp = self.temp.text().strip('.').split()[0]
-            return float(temp) if '.' in temp else int(temp)
+            return Decimal(temp) if '.' in temp else int(temp)
 
     def get_math_sign(self) -> Optional[str]:
         if self.temp.text():
@@ -140,6 +145,7 @@ class Calculator(QMainWindow):
 
     def calculate(self) -> Optional[str]:
         try:
+            # Используем Decimal для операций
             result = self.remove_trailing_zeros(
                 (config.OPERATIONS[self.get_math_sign()](
                     self.get_temp_num(), self.get_entry_num())))
